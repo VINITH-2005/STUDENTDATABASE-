@@ -1,0 +1,163 @@
+CREATE TABLE Faculty (
+    faculty_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    mobile_number VARCHAR(15),
+    salary DECIMAL(10, 2) NOT NULL
+);
+
+CREATE TABLE Students (
+    student_id INT PRIMARY KEY AUTO_INCREMENT,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    roll_no VARCHAR(20) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    mobile_number VARCHAR(15),
+    gender VARCHAR(10),
+    address VARCHAR(255),
+    aadhar_card_number VARCHAR(12) UNIQUE NOT NULL,
+    parent_first_name VARCHAR(50),
+    parent_last_name VARCHAR(50),
+    parent_mobile_number VARCHAR(15)
+);
+
+CREATE TABLE Enrollments (
+    enrollment_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT UNIQUE,
+    enrollment_no VARCHAR(50) UNIQUE NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id)
+);
+
+CREATE TABLE Courses (
+    course_id INT PRIMARY KEY AUTO_INCREMENT,
+    course_name VARCHAR(100) NOT NULL,
+    faculty_id INT,
+    fee_amount DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (faculty_id) REFERENCES Faculty(faculty_id)
+);
+
+CREATE TABLE StudentFees (
+    fee_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT,
+    course_id INT,
+    payment_date DATE NOT NULL,
+    amount_paid DECIMAL(10, 2) NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id),
+    FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+
+CREATE TABLE ExamResults (
+    result_id INT PRIMARY KEY AUTO_INCREMENT,
+    student_id INT,
+    course_id INT,
+    exam_name VARCHAR(100) NOT NULL,
+    marks_obtained INT NOT NULL,
+    total_marks INT NOT NULL,
+    FOREIGN KEY (student_id) REFERENCES Students(student_id),
+    FOREIGN KEY (course_id) REFERENCES Courses(course_id)
+);
+
+CREATE TABLE Grades (
+    grade_id INT PRIMARY KEY AUTO_INCREMENT,
+    result_id INT UNIQUE,
+    grade CHAR(2) NOT NULL,
+    FOREIGN KEY (result_id) REFERENCES ExamResults(result_id)
+);
+
+
+INSERT INTO Faculty (first_name, last_name, email, mobile_number, salary) VALUES
+('Dr. Ramesh', 'Sharma', 'r.sharma@example.edu', '9876543210', 85000.00),
+('Prof. Priya', 'Verma', 'p.verma@example.edu', '9988776655', 92000.00),
+('Dr. Ankit', 'Kumar', 'a.kumar@example.edu', '9012345678', 78000.00);
+
+
+INSERT INTO Students (first_name, last_name, roll_no, email, mobile_number, gender, address, aadhar_card_number, parent_first_name, parent_last_name, parent_mobile_number) VALUES
+('pampatti', 'vinith', '74', 'pvinith333@gmail.com', '6305859899', 'Male', '1-118, shivaliyam colony, thumkunta', '968816496448', 'pampatti', 'Eshwar', '9701656267'),
+('Gonela', 'Praneeth', '38', 'praneethkumar@gmail.com', '9121823722', 'Male', '1-4-113, Rtc colony, yamjal', '563690214897', 'kumara', 'swamy', '9012345678'),
+('maddikuntla', 'Eshwar', '45', 'maddikuntlaeshwar@gmail.com', '9911223344', 'Male', '3-4-221, Bank colony, shamirpet', '345678901234', 'maddikuntla', 'bramaiah', '9876543210');
+
+
+INSERT INTO Courses (course_name, faculty_id, fee_amount) VALUES
+('CSE AIML', 1, 15000.00),
+('CSE CORE', 2, 12000.00),
+('CSE AIDS', 3, 13500.00);
+
+
+INSERT INTO ExamResults (student_id, course_id, exam_name, marks_obtained, total_marks) VALUES
+(1, 1, 'Mid-Term', 85, 100),
+(2, 2, 'Final Exam', 92, 100),
+(3, 3, 'Mid-Term', 78, 100);
+
+
+INSERT INTO Grades (result_id, grade) VALUES
+(1, 'A'),
+(2, 'A+'),
+(3, 'B+');
+
+
+INSERT INTO StudentFees (student_id, course_id, payment_date, amount_paid) VALUES
+(1, 1, '2024-08-10', 15000.00),
+(2, 2, '2024-08-12', 12000.00),
+(3, 3, '2024-08-15', 13500.00);
+
+
+INSERT INTO Enrollments (student_id, enrollment_no) VALUES
+(1, '2403031461717'),
+(2, '2403031461718'),
+(3, '2403031461719');
+
+
+SELECT * FROM Faculty;
+SELECT * FROM Students;
+SELECT * FROM Enrollments;
+SELECT * FROM Courses;
+SELECT * FROM StudentFees;
+SELECT * FROM ExamResults;
+SELECT * FROM Grades;
+
+-- 1. Get all students with their enrollment numbers
+SELECT s.student_id, s.first_name, s.last_name, e.enrollment_no FROM Students s LEFT JOIN Enrollments e ON s.student_id = e.student_id;
+
+-- 2. List all courses with the faculty member teaching each course
+SELECT c.course_id, c.course_name, f.first_name AS faculty_first_name, f.last_name AS faculty_last_name FROM Courses c JOIN Faculty f ON c.faculty_id = f.faculty_id;
+
+-- 3. Show all fees paid by a particular student (by student_id)
+SELECT sf.fee_id, sf.payment_date, sf.amount_paid, c.course_name FROM StudentFees sf JOIN Courses c ON sf.course_id = c.course_id WHERE sf.student_id = 1;
+
+-- 4. Get exam results with grades for all students
+SELECT s.first_name, s.last_name, c.course_name, er.exam_name, er.marks_obtained, er.total_marks, g.grade FROM ExamResults er JOIN Students s ON er.student_id = s.student_id JOIN Courses c ON er.course_id = c.course_id LEFT JOIN Grades g ON er.result_id = g.result_id;
+
+-- 5. Find students who have not paid full fees for a course
+SELECT s.student_id, s.first_name, s.last_name, c.course_name, c.fee_amount, IFNULL(SUM(sf.amount_paid), 0) AS total_paid FROM Students s JOIN Courses c LEFT JOIN StudentFees sf ON s.student_id = sf.student_id AND c.course_id = sf.course_id GROUP BY s.student_id, c.course_id HAVING total_paid < c.fee_amount;
+
+-- 6. Count total students enrolled in each course
+SELECT c.course_name, COUNT(DISTINCT sf.student_id) AS enrolled_students FROM Courses c LEFT JOIN StudentFees sf ON c.course_id = sf.course_id GROUP BY c.course_id;
+
+-- 7. List all faculty with their total salary
+SELECT faculty_id, first_name, last_name, salary FROM Faculty;
+
+-- 8. Get the average marks obtained by students in each course
+SELECT c.course_name, AVG(er.marks_obtained) AS avg_marks FROM ExamResults er JOIN Courses c ON er.course_id = c.course_id GROUP BY c.course_id;
+
+-- 9. Get detailed student info with parent contact
+SELECT first_name, last_name, roll_no, email, mobile_number, gender, address, aadhar_card_number, parent_first_name, parent_last_name, parent_mobile_number FROM Students;
+
+-- 10. Get all courses a student is enrolled in (by enrollment_no)
+SELECT s.first_name, s.last_name, e.enrollment_no, c.course_name FROM Students s JOIN Enrollments e ON s.student_id = e.student_id JOIN StudentFees sf ON s.student_id = sf.student_id JOIN Courses c ON sf.course_id = c.course_id WHERE e.enrollment_no = '2403031461717';
+
+-- 11. Find students who scored more than 80 marks in any exam
+SELECT s.student_id, s.first_name, s.last_name, er.exam_name, er.marks_obtained FROM ExamResults er JOIN Students s ON er.student_id = s.student_id WHERE er.marks_obtained > 80;
+
+-- 12. List faculty with the number of courses they teach
+SELECT f.faculty_id, f.first_name, f.last_name, COUNT(c.course_id) AS courses_count FROM Faculty f LEFT JOIN Courses c ON f.faculty_id = c.faculty_id GROUP BY f.faculty_id;
+
+-- 13. Show total fees collected for each course
+SELECT c.course_name, SUM(sf.amount_paid) AS total_fees_collected FROM Courses c LEFT JOIN StudentFees sf ON c.course_id = sf.course_id GROUP BY c.course_id;
+
+-- 14. Get students and their total fees paid across all courses
+SELECT s.student_id, s.first_name, s.last_name, IFNULL(SUM(sf.amount_paid), 0) AS total_fees_paid FROM Students s LEFT JOIN StudentFees sf ON s.student_id = sf.student_id GROUP BY s.student_id;
+
+-- 15. List students who have not enrolled in any course yet (no fees paid)
+SELECT s.student_id, s.first_name, s.last_name FROM Students s LEFT JOIN StudentFees sf ON s.student_id = sf.student_id WHERE sf.fee_id IS NULL;
+
